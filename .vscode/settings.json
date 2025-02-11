@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "merch_store",
+            "database": "merch_store",
+            "username": "coins_user",
+            "password": "Djsjnd243"
+        }
+    ]
+}
