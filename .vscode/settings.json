@@ -9,6 +9,16 @@
             "database": "merch_store",
             "username": "coins_user",
             "password": "Djsjnd243"
+        },
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "avito-shop-service",
+            "username": "postgres",
+            "password": "password",
+            "database": "shop"
         }
     ]
 }
