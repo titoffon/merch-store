@@ -1,16 +1,13 @@
 -- Создание таблицы пользователей (users)
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(255) PRIMARY KEY,
     hashed_password TEXT NOT NULL,
-    balance BIGINT NOT NULL DEFAULT 1000,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    balance BIGINT NOT NULL
 );
 
 -- Создание таблицы мерча (merch)
 CREATE TABLE IF NOT EXISTS merch (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) PRIMARY KEY,
     price BIGINT NOT NULL
 );
 
@@ -29,12 +26,11 @@ INSERT INTO merch (name, price) VALUES
 
 -- Создание таблицы покупок (purchases) для хранения покупок пользователей
 CREATE TABLE IF NOT EXISTS purchases (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,
-    merch_id INT NOT NULL,
+    username varchar(255) NOT NULL,
+    merch_item varchar(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id),
-    FOREIGN KEY (merch_id) REFERENCES merch (id)
+    FOREIGN KEY (username) REFERENCES users (username),
+    FOREIGN KEY (merch_item) REFERENCES merch (name)
 );
 
 -- Создание таблицы для логирования транзакций с монетами (transaction_log)
