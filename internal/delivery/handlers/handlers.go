@@ -20,6 +20,10 @@ type AuthResponse struct {
 	Token string `json:"token"`
 }
 
+type ErrorResponse struct{
+	Error string `json:"error"`
+}
+
 func Auth(conDB *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req AuthRequest
@@ -32,9 +36,19 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 
 		if req.Username == "" || req.Password == "" {
 			slog.Warn("Validation failed")
-			http.Error(w, "Validation failed", http.StatusBadRequest)
+			//http.Error(w, "Validation failed", http.StatusBadRequest)
+			res, err := json.Marshal(ErrorResponse{
+				Error: "Validation failed",
+			})
+			if err != nil{
+				slog.Error("failed Unmarshall")
+				http.Error(w, "Internal error", http.StatusInternalServerError  )
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest )
+			json.NewEncoder(w).Encode(res)
 			return
-	}
+		}
 		
 		user, err := conDB.GetUserByName(r.Context(), req.Username)
 		if err != nil {

@@ -60,21 +60,19 @@ func (r *DB) CreateUser(ctx context.Context, name, password string) error {
 	return nil
 }
 
-// CheckPassword проверяет, совпадает ли введенный пароль с сохраненным хэшированным паролем
 func (r *DB) CheckPassword(ctx context.Context, name, password string) (bool, error) {
 	user, err := r.GetUserByName(ctx, name)
 	if err != nil {
 		return false, err
 	}
 	if user == nil {
-		return false, nil // Пользователь не найден
+		return false, nil
 	}
 
-	// Проверяем пароль
 	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
 	if err != nil {
 		slog.Info("The password is uncorrect")
-		return false, nil // Пароль неверный
+		return false, nil
 	}
 	slog.Info("The password is correct")
 	return true, nil
