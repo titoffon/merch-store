@@ -2,14 +2,17 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/titoffon/merch-store/internal/db"
+	"golang.org/x/crypto/bcrypt"
 )
+
+const WelcomCoins = 1000
 
 type AuthRequest struct {
 	Username string `json:"username"`
@@ -36,70 +39,102 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 
 		if req.Username == "" || req.Password == "" {
 			slog.Warn("Validation failed")
-			//http.Error(w, "Validation failed", http.StatusBadRequest)
+			ResponseError(w, 400, "Validation failed")
+			return
+
+		}
+		
+		user, err := conDB.GetUserByName(r.Context(), req.Username)
+		if err != nil {
+			ResponseError(w, 500, "internal error")
+			slog.Error("Database error", slog.String("error", err.Error()))
+			return
+		}
+
+		if user == nil {
+			hashPassword, err := HashedPass( req.Password )
+			if err != nil{
+				ResponseError(w, 400, err.Error())
+				slog.Error("Failed to hash pass")
+				return
+			}
+			
+			user, err = conDB.CreateUser(r.Context(), db.User{
+				Username: req.Username,
+				HashedPassword: string(hashPassword),
+				Balance: WelcomCoins,
+			})
+			if err != nil {
+				ResponseError(w, 500, "internal error")
+				slog.Error("Failed to create user", slog.String("error", err.Error()))
+				return
+			}
+			
+
+			token, err := generateJWTToken(user.Username, []byte(os.Getenv("JWT_SECRET")))
+			if err != nil {
+				ResponseError(w, 500, "internal error")
+				slog.Error("Failed to generate token", slog.String("error", err.Error()))
+				return
+			}
+			
+			ResponseJWT(w, token)
+			return 
+
+		}
+		//TO DO
+
+		/*valid, err := conDB.CheckPassword(r.Context(), req.Username, req.Password)
+		if err != nil || !valid {
+			http.Error(w, "Invalid password", http.StatusUnauthorized)
+			slog.Warn("Invalid password")
+			return
+		}*/
+		
+	}
+}
+
+func ResponseError(w http.ResponseWriter, code int, message string){
 			res, err := json.Marshal(ErrorResponse{
-				Error: "Validation failed",
+				Error: message,
 			})
 			if err != nil{
 				slog.Error("failed Unmarshall")
 				http.Error(w, "Internal error", http.StatusInternalServerError  )
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest )
-			json.NewEncoder(w).Encode(res)
-			return
-		}
-		
-		user, err := conDB.GetUserByName(r.Context(), req.Username)
-		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			slog.Error("Database error", slog.String("error", err.Error()))
-			return
-		}
-
-		if user == nil {
-			err = conDB.CreateUser(r.Context(), req.Username, req.Password)
-			if err != nil {
-				http.Error(w, "Failed to create user", http.StatusInternalServerError)
-				slog.Error("Failed to create user", slog.String("error", err.Error()))
-				return
-			}
-			user = &db.User{
-				Username: req.Username,
-				Balance:  1000,
-			}
-		} else {
-			valid, err := conDB.CheckPassword(r.Context(), req.Username, req.Password)
-			if err != nil || !valid {
-				http.Error(w, "Invalid password", http.StatusUnauthorized)
-				slog.Warn("Invalid password")
-				return
-			}
-		}
-
-		token, err := generateJWTToken(user.Username)
-		if err != nil {
-			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-			slog.Error("Failed to generate token", slog.String("error", err.Error()))
-			return
-		}
-
-		resp := AuthResponse{
-			Token: token,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(resp)
-	}
+			w.WriteHeader(code)
+			w.Write(res)
 }
 
-func generateJWTToken(username string) (string, error) {
 
-	secretKey := []byte(os.Getenv("JWT_SECRET"))
+func ResponseJWT(w http.ResponseWriter, token string){
+			res, err := json.Marshal(AuthResponse{
+				Token: token,
+			})
+			if err != nil{
+				slog.Error("failed Unmarshall")
+				http.Error(w, "Internal error", http.StatusInternalServerError  )
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			w.Write(res)
+}
+
+	func HashedPass(password string) ([]byte, error){
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if err != nil {
+				return nil, fmt.Errorf("failed to hash password: %w", err)
+			}
+		return hashedPassword, nil
+	}
+
+
+func generateJWTToken(username string, secretKey []byte) (string, error) {
 
 	claims := jwt.MapClaims{
-		"username": username,
-		"exp":      time.Now().Add(time.Hour * 72).Unix(), // токен истекает через 72 часа
+		"sub": username,
+		//"exp":      time.Now().Add(time.Hour * 72).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

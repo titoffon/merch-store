@@ -2,11 +2,12 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type DB struct{
@@ -37,30 +38,27 @@ func (r *DB) GetUserByName(ctx context.Context, name string) (*User, error){
 
 	var user User
 	if err := row.Scan(&user.Username, &user.HashedPassword, &user.Balance); err != nil {
-		if err.Error() == "no rows in result set" {
+		if errors.Is(err, pgx.ErrNoRows){
 			return nil, nil
 		}
+		
 		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
 	return &user, nil
 }
 
-func (r *DB) CreateUser(ctx context.Context, name, password string) error {
+func (r *DB) CreateUser(ctx context.Context, user User) (*User, error) {
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
 
 	q := "INSERT INTO users (username, hashed_password, balance) VALUES ($1, $2, $3)"
-	_, err = r.DBPool.Exec(ctx, q, name, string(hashedPassword), 1000)
+	_, err := r.DBPool.Exec(ctx, q, user.Username, string(user.HashedPassword), user.Balance) //TO DO вынести balance
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %w", err)
+		return nil, fmt.Errorf("failed to insert user: %w", err)
 	}
-	return nil
+	return &user, nil
 }
 
-func (r *DB) CheckPassword(ctx context.Context, name, password string) (bool, error) {
+/*func (r *DB) CheckPassword(ctx context.Context, name, password string) (bool, error) {
 	user, err := r.GetUserByName(ctx, name)
 	if err != nil {
 		return false, err
@@ -76,7 +74,7 @@ func (r *DB) CheckPassword(ctx context.Context, name, password string) (bool, er
 	}
 	slog.Info("The password is correct")
 	return true, nil
-}
+}*/
 
 
 
