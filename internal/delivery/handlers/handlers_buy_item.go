@@ -18,8 +18,7 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) PurchaseMerch(w http.ResponseWriter, r *http.Request) {
 
 		item := chi.URLParam(r, "item")
 		if item == "" {
@@ -28,61 +27,44 @@ func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
 			return
 		}
 
-		tokenStr := r.Header.Get("Authorization")
-		if tokenStr == "" {
-			slog.Error("Authorization token is required")
-			ResponseError(w, http.StatusUnauthorized, "Authorization token is required")
-			return
-		}
-
-		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
-
-		claims, err := validateJWT(tokenStr, []byte(os.Getenv("JWT_SECRET")))
+		username, err := ExtractJWT(w, r)
 		if err != nil {
-			ResponseError(w, http.StatusUnauthorized, "Invalid token")
-			return
-		}
-
-		username := claims.Username
-		user, err := conDB.GetUserByName(r.Context(), username)
-		if err != nil || user == nil {
-			slog.Error("User by token not found")
-			ResponseError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
 
 
-		price, err := conDB.GetItemPrice(r.Context(), item)
+		price, err := h.Dal.GetItemPrice(r.Context(), item)
 		if err != nil{
 			slog.Error("error with the price", slog.String("error", err.Error()))
 			ResponseError(w, 400, "error with the item")
 		}
 
-		if user.Balance < price {
-			slog.Info("Not enough coins")
-			ResponseError(w, http.StatusBadRequest, "Not enough coins")
-			return
-		}
-
-		tx, err := conDB.DBPool.Begin(r.Context())
+		tx, err := h.Dal.DBPool.Begin(r.Context())
 		if err != nil {
 			slog.Error("Transaction start error")
 			ResponseError(w, http.StatusInternalServerError, "Transaction start error")
 			return
 		}
-		defer tx.Rollback(r.Context())
+		defer func(){
+			txErr := tx.Rollback(r.Context())
+			if txErr != nil{
+				slog.Info(txErr.Error())
+			}
+			}()
 
-		user.Balance = user.Balance - price
-		user, err = conDB.UpdateUserBalance(r.Context(), user, tx)
+		err = h.Dal.MinusUserBalance(r.Context(), username, price, tx)
 		if err != nil {
-			slog.Error("Transaction start error", slog.String("error", err.Error()))
-			ResponseError(w, http.StatusInternalServerError, "Failed to record purchase")
+			if errors.Is(err, db.ErrLowBalance){
+				ResponseError(w, 400, "No enough coins")
+				return
+			}
+			slog.Error("Transaction failed", slog.String("error", err.Error()))
+			ResponseError(w, http.StatusInternalServerError, "Transaction failed") 
 			return
 		}
-		fmt.Println(user)
 
-		purchase, err := conDB.InsertPurchases(r.Context(), db.Purchases{
-				Username: user.Username,
+		err = h.Dal.InsertPurchases(r.Context(), db.Purchases{
+				Username: username,
    				Merch_item: item,
 			}, tx)
 		if err != nil {
@@ -90,10 +72,8 @@ func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
 			ResponseError(w, http.StatusInternalServerError, "Failed to record purchase")
 			return
 		}
-
-		fmt.Println(purchase)
-
-		transactionLog, err := conDB.InsertTransaction_log(r.Context(), db.TransactionLog{
+/*
+		transactionLog, err := h.Dal.InsertTransaction_log(r.Context(), db.TransactionLog{
 			Sender: user.Username,
 			Recipient: "",
 			Amount: price,
@@ -106,6 +86,8 @@ func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
 		}
 
 		fmt.Println(transactionLog)
+*/
+//TO DO изменить БД 
 
 		err = tx.Commit(r.Context())
 		if err != nil {
@@ -116,6 +98,31 @@ func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 	}
+
+
+func ExtractJWT(w http.ResponseWriter, r *http.Request) (string, error){
+
+	tokenStr := r.Header.Get("Authorization")
+
+	if tokenStr == "" {
+			slog.Error("Authorization token is required")
+			ResponseError(w, http.StatusUnauthorized, "Authorization token is required")
+			return "", fmt.Errorf("Authorization token is required")
+		}
+
+	tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
+
+	claims, err := validateJWT(tokenStr, []byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		ResponseError(w, http.StatusUnauthorized, "Invalid token")
+		return "", fmt.Errorf("Invalid token")
+	}
+	if claims.Username == ""{
+		ResponseError(w, http.StatusUnauthorized, "Empty Username Plaload")
+		slog.Error("Empty Username Plaload")
+		return "", fmt.Errorf("Empty Username Plaload")
+	}
+	return claims.Username, nil
 }
 
 func validateJWT(tokenStr string, secretKey []byte) (*UserClaims, error) {

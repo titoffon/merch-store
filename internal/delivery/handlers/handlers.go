@@ -27,8 +27,11 @@ type ErrorResponse struct{
 	Error string `json:"error"`
 }
 
-func Auth(conDB *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+type Handlers struct {
+	Dal *db.DB
+}
+
+func (h *Handlers) Auth(w http.ResponseWriter, r *http.Request) {
 		var req AuthRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
         if err != nil {
@@ -44,7 +47,7 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 
 		}
 		
-		user, err := conDB.GetUserByName(r.Context(), req.Username)
+		user, err := h.Dal.GetUserByName(r.Context(), req.Username)
 		if err != nil {
 			ResponseError(w, 500, "internal error")
 			slog.Error("Database error", slog.String("error", err.Error()))
@@ -59,7 +62,7 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 				return
 			}
 			
-			user, err = conDB.CreateUser(r.Context(), db.User{
+			user, err = h.Dal.CreateUser(r.Context(), db.User{
 				Username: req.Username,
 				HashedPassword: string(hashPassword),
 				Balance: WelcomCoins,
@@ -83,7 +86,7 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 
 		}
 
-		valid, err := CheckPassword(user, req.Password)
+		valid, err := CheckPassword(user.HashedPassword, req.Password)
 		if err != nil || !valid {
 			ResponseError(w, http.StatusUnauthorized, "Invalid password")
 			slog.Warn("Invalid password")
@@ -99,12 +102,12 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 		ResponseJWT(w, token)
 		
 	}
-}
 
 
-func CheckPassword(user *db.User, password string) (bool, error) {
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+func CheckPassword(hashPassword, password string) (bool, error) {
+
+	err := bcrypt.CompareHashAndPassword([]byte(hashPassword), []byte(password))
 	if err != nil {
 		slog.Info("The password is uncorrect")
 		return false, nil
@@ -160,25 +163,25 @@ func generateJWTToken(username string, secretKey []byte) (string, error) {
 	return token.SignedString(secretKey)
 }
 
-func GetUserInfo(conDB *db.DB) http.HandlerFunc {
+func GetUserInfo(dal *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Использование pool для работы с БД
 	}
 }
 
-func GetUserPurchases(conDB *db.DB) http.HandlerFunc {
+func GetUserPurchases(dal *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Использование pool для работы с БД
 	}
 }
 
-func GetUserTransactions(conDB *db.DB) http.HandlerFunc {
+func GetUserTransactions(dal *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Использование pool для работы с БД
 	}
 }
 
-func TransferCoins(conDB *db.DB) http.HandlerFunc {
+func TransferCoins(dal *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Использование pool для работы с БД
 	}

@@ -6,23 +6,27 @@ import (
 	"github.com/titoffon/merch-store/internal/delivery/handlers"
 )
 
-func NewRouter(connectionDB *db.DB) *chi.Mux {
+func NewRouter(dal *db.DB) *chi.Mux {
 	r := chi.NewRouter()
 
+	h := handlers.Handlers{
+		Dal: dal,
+	}
 
-	r.Post("/api/auth", handlers.Auth(connectionDB))
-	r.Get("/api/buy/{item}", handlers.PurchaseMerch(connectionDB))
+	r.Post("/api/auth", h.Auth)
+	r.Get("/api/buy/{item}", h.PurchaseMerch)
+	//r.Get("/api/sendCoin", h.SendCoins)
 
-	r.Route("/api", func(r chi.Router) {
-		r.Get("/info", handlers.GetUserInfo(connectionDB))
-		r.Get("/me/purchases", handlers.GetUserPurchases(connectionDB))
-		r.Get("/me/transactions", handlers.GetUserTransactions(connectionDB))
+	/*r.Route("/api", func(r chi.Router) {
+		r.Get("/info", handlers.GetUserInfo(dal))
+		r.Get("/me/purchases", handlers.GetUserPurchases(dal))
+		r.Get("/me/transactions", handlers.GetUserTransactions(dal))
 	})
 
 	r.Route("/merch", func(r chi.Router) {
-		r.Post("/purchase", handlers.PurchaseMerch(connectionDB))
-		r.Post("/coins/transfer", handlers.TransferCoins(connectionDB))
-	})
+		r.Post("/purchase", handlers.PurchaseMerch(dal))
+		r.Post("/coins/transfer", handlers.TransferCoins(dal))
+	})*/
 
 	return r
 }

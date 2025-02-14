@@ -30,14 +30,14 @@ func main(){
 
 	ctx := context.Background()
 
-	pool, err := db.New(ctx, connectionString)
+	dal, err := db.New(ctx, connectionString)
 	if err != nil {
 		slog.Error("failed to coыnnect to database: %v", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	defer pool.DBPool.Close()
+	defer dal.DBPool.Close()
 
-	r := routes.NewRouter(pool)
+	r := routes.NewRouter(dal)
 
 	slog.Info("Starting server", slog.String("address", cfg.Port))
 	err = http.ListenAndServe(":"+cfg.Port, r)

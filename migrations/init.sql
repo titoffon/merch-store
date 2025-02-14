@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) PRIMARY KEY,
     hashed_password TEXT NOT NULL,
     balance BIGINT NOT NULL
+
+    CONSTRAINT users_balance_non_negative CHECK (balance >= 0)
 );
 
 -- Создание таблицы мерча (merch)

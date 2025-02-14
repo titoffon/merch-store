@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -87,24 +88,43 @@ func (r *DB) GetItemPrice(ctx context.Context, item string) (int64, error) {
 	return price, nil
 }
 
-func (r *DB) UpdateUserBalance(ctx context.Context, user *User, tx pgx.Tx) (*User, error){
+var ErrLowBalance = errors.New("No enough coins")
 
-	q := "UPDATE users SET balance = $1 WHERE username = $2"
-	_, err := r.DBPool.Exec(ctx, q, user.Balance, user.Username )
-	if err != nil {
-		return nil, fmt.Errorf("failed to update user balance: %w", err)
+func (r *DB) MinusUserBalance(ctx context.Context, username string, price int64, tx pgx.Tx) (error){
+
+	q := "UPDATE users SET balance = balance - $1 WHERE username = $2"
+	var err error
+	if tx == nil{
+		_, err = r.DBPool.Exec(ctx, q, price, username )		
+	} else {
+		_, err = tx.Exec(ctx, q, price, username )
 	}
-	return user, nil
+	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr){
+			if pgErr.ConstraintName == "users_balance_non_negative"{
+				return ErrLowBalance
+			}
+		}
+		return fmt.Errorf("failed to update user balance: %w", err)
+	}
+	return  nil
 }
 
-func (r *DB) InsertPurchases(ctx context.Context, purchase Purchases, tx pgx.Tx) (*Purchases, error){
+func (r *DB) InsertPurchases(ctx context.Context, purchase Purchases, tx pgx.Tx) (error){
 
 	q := "INSERT INTO purchases (username, merch_item) VALUES ($1, $2)"
-	_, err := r.DBPool.Exec(ctx, q, purchase.Username, purchase.Merch_item)
-	if err != nil {
-		return nil, fmt.Errorf("failed to INSERT INTO purchases: %w", err)
+	var err error
+	if tx == nil{
+		_, err = r.DBPool.Exec(ctx, q, purchase.Username, purchase.Merch_item)		
+	} else {
+		_, err = tx.Exec(ctx, q, purchase.Username, purchase.Merch_item)
 	}
-	return &purchase, nil
+	if err != nil {
+		return fmt.Errorf("failed to INSERT INTO purchases: %w", err)
+	}
+	return nil
 }
 
 func (r *DB) InsertTransaction_log(ctx context.Context, transaction TransactionLog, tx pgx.Tx) (*TransactionLog, error){
