@@ -20,6 +20,18 @@ type User struct{
 	Balance     int64
 }
 
+type Purchases struct {
+	Username string
+    Merch_item string
+}
+
+type TransactionLog struct {
+    Sender string
+    Recipient string
+    Amount int64
+    TypeOfTransaction string
+}
+
 func New(ctx context.Context, connectionString string) (*DB, error) {
 
 	pool, err := pgxpool.New(ctx, connectionString)
@@ -51,30 +63,57 @@ func (r *DB) CreateUser(ctx context.Context, user User) (*User, error) {
 
 
 	q := "INSERT INTO users (username, hashed_password, balance) VALUES ($1, $2, $3)"
-	_, err := r.DBPool.Exec(ctx, q, user.Username, string(user.HashedPassword), user.Balance) //TO DO вынести balance
+	_, err := r.DBPool.Exec(ctx, q, user.Username, string(user.HashedPassword), user.Balance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert user: %w", err)
 	}
 	return &user, nil
 }
 
-/*func (r *DB) CheckPassword(ctx context.Context, name, password string) (bool, error) {
-	user, err := r.GetUserByName(ctx, name)
+func (r *DB) GetItemPrice(ctx context.Context, item string) (int64, error) {
+	
+	q := "SELECT price FROM merch WHERE name = $1"
+
+	row := r.DBPool.QueryRow(ctx, q, item)
+
+	var price int64 
+	if err := row.Scan(&price); err != nil {
+		if errors.Is(err, pgx.ErrNoRows){
+			return 0, fmt.Errorf("There is no such product: %w", err)
+		}
+		
+		return 0, fmt.Errorf("failed to query item: %w", err)
+	}
+	return price, nil
+}
+
+func (r *DB) UpdateUserBalance(ctx context.Context, user *User, tx pgx.Tx) (*User, error){
+
+	q := "UPDATE users SET balance = $1 WHERE username = $2"
+	_, err := r.DBPool.Exec(ctx, q, user.Balance, user.Username )
 	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("failed to update user balance: %w", err)
 	}
-	if user == nil {
-		return false, nil
-	}
+	return user, nil
+}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+func (r *DB) InsertPurchases(ctx context.Context, purchase Purchases, tx pgx.Tx) (*Purchases, error){
+
+	q := "INSERT INTO purchases (username, merch_item) VALUES ($1, $2)"
+	_, err := r.DBPool.Exec(ctx, q, purchase.Username, purchase.Merch_item)
 	if err != nil {
-		slog.Info("The password is uncorrect")
-		return false, nil
+		return nil, fmt.Errorf("failed to INSERT INTO purchases: %w", err)
 	}
-	slog.Info("The password is correct")
-	return true, nil
-}*/
+	return &purchase, nil
+}
 
+func (r *DB) InsertTransaction_log(ctx context.Context, transaction TransactionLog, tx pgx.Tx) (*TransactionLog, error){
 
+	q := "INSERT INTO transaction_log (sender, recipient, amount, type) VALUES ($1, $2, $3, $4)"
+	_, err := r.DBPool.Exec(ctx, q, transaction.Sender, transaction.Recipient, transaction.Amount, transaction.TypeOfTransaction)
+	if err != nil {
+		return nil, fmt.Errorf("failed to INSERT INTO transaction_log: %w", err)
+	}
 
+	return &transaction, nil
+}

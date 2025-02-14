@@ -11,6 +11,7 @@ func NewRouter(connectionDB *db.DB) *chi.Mux {
 
 
 	r.Post("/api/auth", handlers.Auth(connectionDB))
+	r.Get("/api/buy/{item}", handlers.PurchaseMerch(connectionDB))
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/info", handlers.GetUserInfo(connectionDB))

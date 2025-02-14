@@ -32,7 +32,7 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 		var req AuthRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
         if err != nil {
-            http.Error(w, "Invalid request body", http.StatusBadRequest)
+			ResponseError(w, http.StatusBadRequest, "Invalid request body")
 			slog.Warn("Username and password must not be empty.")
             return
         }
@@ -82,16 +82,35 @@ func Auth(conDB *db.DB) http.HandlerFunc {
 			return 
 
 		}
-		//TO DO
 
-		/*valid, err := conDB.CheckPassword(r.Context(), req.Username, req.Password)
+		valid, err := CheckPassword(user, req.Password)
 		if err != nil || !valid {
-			http.Error(w, "Invalid password", http.StatusUnauthorized)
+			ResponseError(w, http.StatusUnauthorized, "Invalid password")
 			slog.Warn("Invalid password")
 			return
-		}*/
+		}
+
+		token, err := generateJWTToken(user.Username, []byte(os.Getenv("JWT_SECRET")))
+		if err != nil {
+			ResponseError(w, 500, "internal error")
+			slog.Error("Failed to generate token", slog.String("error", err.Error()))
+			return
+		}		
+		ResponseJWT(w, token)
 		
 	}
+}
+
+
+func CheckPassword(user *db.User, password string) (bool, error) {
+
+	err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+	if err != nil {
+		slog.Info("The password is uncorrect")
+		return false, nil
+	}
+	slog.Info("The password is correct")
+	return true, nil
 }
 
 func ResponseError(w http.ResponseWriter, code int, message string){
@@ -154,12 +173,6 @@ func GetUserPurchases(conDB *db.DB) http.HandlerFunc {
 }
 
 func GetUserTransactions(conDB *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Использование pool для работы с БД
-	}
-}
-
-func PurchaseMerch(conDB *db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Использование pool для работы с БД
 	}

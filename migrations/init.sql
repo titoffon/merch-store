@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS purchases (
 -- Это таблица, которая будет содержать как покупки мерча, так и переводы монет между пользователями
 CREATE TABLE IF NOT EXISTS transaction_log (
     id SERIAL PRIMARY KEY,
-    source_id INT,
-    destination_id INT,
+    sender VARCHAR(255) NOT NULL,
+    recipient VARCHAR(255) NOT NULL,
     amount BIGINT NOT NULL,
     type VARCHAR(50) NOT NULL,  -- Тип транзакции: 'purchase' / 'transfer'
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
