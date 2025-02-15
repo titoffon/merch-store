@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/titoffon/merch-store/internal/config"
 	"github.com/titoffon/merch-store/internal/db"
@@ -17,7 +16,17 @@ func main(){
 
 	cfg := config.LoadConfig()
 	
+	err := Run(cfg)
+	if err != nil {
+		fmt.Println()
+		return
+	}
 
+	
+
+}
+
+func Run(cfg *config.Config ) error{
 	logger.InitGlobalLogger(cfg.LogLevel)
 
 	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
@@ -33,7 +42,7 @@ func main(){
 	dal, err := db.New(ctx, connectionString)
 	if err != nil {
 		slog.Error("failed to coыnnect to database: %v", slog.String("error", err.Error()))
-		os.Exit(1)
+		return err
 	}
 	defer dal.DBPool.Close()
 
@@ -43,6 +52,7 @@ func main(){
 	err = http.ListenAndServe(":"+cfg.Port, r)
 	if err != nil {
 		slog.Error("Failed to start server", slog.String("error", err.Error()))
+		return err
 	}
-
+	return nil
 }
