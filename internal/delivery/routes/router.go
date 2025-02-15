@@ -15,7 +15,8 @@ func NewRouter(dal *db.DB) *chi.Mux {
 
 	r.Post("/api/auth", h.Auth)
 	r.Get("/api/buy/{item}", h.PurchaseMerch)
-	//r.Get("/api/sendCoin", h.SendCoins)
+	r.Post("/api/sendCoin", h.SendCoins)
+	r.Get("/api/info", h.UserInfo)
 
 	/*r.Route("/api", func(r chi.Router) {
 		r.Get("/info", handlers.GetUserInfo(dal))

@@ -30,7 +30,6 @@ type TransactionLog struct {
     Sender string
     Recipient string
     Amount int64
-    TypeOfTransaction string
 }
 
 func New(ctx context.Context, connectionString string) (*DB, error) {
@@ -112,6 +111,21 @@ func (r *DB) MinusUserBalance(ctx context.Context, username string, price int64,
 	return  nil
 }
 
+func (r *DB) PlusUserBalance(ctx context.Context, username string, amount int64, tx pgx.Tx) (error){
+
+	q := "UPDATE users SET balance = balance + $1 WHERE username = $2"
+	var err error
+	if tx == nil{
+		_, err = r.DBPool.Exec(ctx, q, amount, username )		
+	} else {
+		_, err = tx.Exec(ctx, q, amount, username )
+	}
+	if err != nil {
+		return fmt.Errorf("failed to update recipient balance: %w", err)
+	}
+	return  nil
+}
+
 func (r *DB) InsertPurchases(ctx context.Context, purchase Purchases, tx pgx.Tx) (error){
 
 	q := "INSERT INTO purchases (username, merch_item) VALUES ($1, $2)"
@@ -129,8 +143,8 @@ func (r *DB) InsertPurchases(ctx context.Context, purchase Purchases, tx pgx.Tx)
 
 func (r *DB) InsertTransaction_log(ctx context.Context, transaction TransactionLog, tx pgx.Tx) (*TransactionLog, error){
 
-	q := "INSERT INTO transaction_log (sender, recipient, amount, type) VALUES ($1, $2, $3, $4)"
-	_, err := r.DBPool.Exec(ctx, q, transaction.Sender, transaction.Recipient, transaction.Amount, transaction.TypeOfTransaction)
+	q := "INSERT INTO transaction_log (sender, recipient, amount) VALUES ($1, $2, $3)"
+	_, err := r.DBPool.Exec(ctx, q, transaction.Sender, transaction.Recipient, transaction.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to INSERT INTO transaction_log: %w", err)
 	}

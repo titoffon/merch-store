@@ -77,7 +77,6 @@ func (h *Handlers) PurchaseMerch(w http.ResponseWriter, r *http.Request) {
 			Sender: user.Username,
 			Recipient: "",
 			Amount: price,
-			TypeOfTransaction: "purchase",
 		}, tx)
 		if err != nil {
 			slog.Error("Transaction start error", slog.String("error", err.Error()))
@@ -87,7 +86,6 @@ func (h *Handlers) PurchaseMerch(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println(transactionLog)
 */
-//TO DO изменить БД 
 
 		err = tx.Commit(r.Context())
 		if err != nil {

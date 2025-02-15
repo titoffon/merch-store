@@ -35,13 +35,13 @@ CREATE TABLE IF NOT EXISTS purchases (
     FOREIGN KEY (merch_item) REFERENCES merch (name)
 );
 
--- Создание таблицы для логирования транзакций с монетами (transaction_log)
--- Это таблица, которая будет содержать как покупки мерча, так и переводы монет между пользователями
 CREATE TABLE IF NOT EXISTS transaction_log (
     id SERIAL PRIMARY KEY,
     sender VARCHAR(255) NOT NULL,
     recipient VARCHAR(255) NOT NULL,
     amount BIGINT NOT NULL,
-    type VARCHAR(50) NOT NULL,  -- Тип транзакции: 'purchase' / 'transfer'
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender) REFERENCES users (username),
+    FOREIGN KEY (recipient) REFERENCES users (username),
+    CONSTRAINT coin_transfers_amount_positive_number CHECK (amount > 0)
 );
