@@ -1,27 +1,18 @@
-package main
+package server
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"net/http"
 
 	"github.com/titoffon/merch-store/internal/config"
-	"github.com/titoffon/merch-store/internal/server"
+	"github.com/titoffon/merch-store/internal/db"
+	"github.com/titoffon/merch-store/internal/delivery/routes"
+	"github.com/titoffon/merch-store/pkg/logger"
 )
 
-func main(){
-
-	cfg := config.LoadConfig()
-	
-	err := server.Run(cfg)
-	if err != nil {
-		fmt.Println()
-		return
-	}
-
-	
-
-}
-
-/*func Run(cfg *config.Config ) error{
+func Run(cfg *config.Config ) error{
 	logger.InitGlobalLogger(cfg.LogLevel)
 
 	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
@@ -50,4 +41,4 @@ func main(){
 		return err
 	}
 	return nil
-}*/
+}
