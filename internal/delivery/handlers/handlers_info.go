@@ -12,13 +12,11 @@ type InfoResponse struct {
     CoinHistory CoinHistory `json:"coinHistory"`
 }
 
-// InvItem описывает один элемент инвентаря.
 type InvItem struct {
     Type     string `json:"type"`
     Quantity int64  `json:"quantity"`
 }
 
-// CoinHistory описывает историю транзакций: полученных и отправленных.
 type CoinHistory struct {
     Received []ReceivedTx `json:"received"`
     Sent     []SentTx     `json:"sent"`

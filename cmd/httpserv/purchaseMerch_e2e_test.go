@@ -32,7 +32,7 @@ func TestE2EPurchaseMerch(t *testing.T) {
     }
 
     resp := tClient.Auth(t, handlers.AuthRequest{
-        Username: "merchBuyer",
+        Username: "merchBuyer2",
         Password: "merchPass",
     })
     if resp == nil || resp.Token == nil || resp.code != 200 {

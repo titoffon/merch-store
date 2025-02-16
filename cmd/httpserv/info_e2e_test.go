@@ -40,7 +40,7 @@ func TestE2EUserInfo(t *testing.T) {
     t.Run("UserInfo", func(t *testing.T) {
 
         authResp := tClient.Auth(t, handlers.AuthRequest{
-            Username: "infoTester",
+            Username: "infoTester1234",
             Password: "infoPass123",
         })
         if authResp == nil || authResp.Token == nil || authResp.code != http.StatusOK {

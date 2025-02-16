@@ -163,26 +163,3 @@ func generateJWTToken(username string, secretKey []byte) (string, error) {
 	return token.SignedString(secretKey)
 }
 
-func GetUserInfo(dal *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Использование pool для работы с БД
-	}
-}
-
-func GetUserPurchases(dal *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Использование pool для работы с БД
-	}
-}
-
-func GetUserTransactions(dal *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Использование pool для работы с БД
-	}
-}
-
-func TransferCoins(dal *db.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Использование pool для работы с БД
-	}
-}

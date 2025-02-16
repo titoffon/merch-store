@@ -72,20 +72,6 @@ func (h *Handlers) PurchaseMerch(w http.ResponseWriter, r *http.Request) {
 			ResponseError(w, http.StatusInternalServerError, "Failed to record purchase")
 			return
 		}
-/*
-		transactionLog, err := h.Dal.InsertTransaction_log(r.Context(), db.TransactionLog{
-			Sender: user.Username,
-			Recipient: "",
-			Amount: price,
-		}, tx)
-		if err != nil {
-			slog.Error("Transaction start error", slog.String("error", err.Error()))
-			ResponseError(w, http.StatusInternalServerError, "Failed to log transaction")
-			return
-		}
-
-		fmt.Println(transactionLog)
-*/
 
 		err = tx.Commit(r.Context())
 		if err != nil {
